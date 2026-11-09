@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Watch room</title>
+<style>
+body{font:15px/1.45 system-ui,sans-serif;margin:16px;color:#1d1d1f;background:#fff;max-width:760px}
+@media (prefers-color-scheme:dark){body{color:#e8e8ea;background:#16161a}.box{background:#202026!important}.out{color:#8a8a93!important}}
+h1{font-size:20px;margin:0 0 4px}.sub{color:#77777f;margin-bottom:12px}
+.box{background:#f3f3f5;border-radius:8px;padding:10px 12px;margin:10px 0}
+.cat{font-size:18px;font-weight:600}.row{display:flex;gap:18px;flex-wrap:wrap}
+ul{margin:4px 0;padding-left:18px}li.out{color:#9a9aa3;text-decoration:line-through}li.ours{font-weight:600}li.turn::after{content:"  ← turn"}
+table{border-collapse:collapse;width:100%}td{padding:2px 6px;border-bottom:1px solid #8883;vertical-align:top}
+.pass{color:#1e8449}.reject{color:#c0392b}.k{color:#77777f}
+</style></head><body>
+<h1 id="h">Room</h1>
+<div class="sub" id="sub">Loading…</div>
+<div id="body"></div>
+<script>
+// the room as our seated bot sees it, published every 20 s by the cluster's writer job to this repository's `live` branch
+var R=(new URLSearchParams(location.search).get('r')||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);
+var BASE='https://raw.githubusercontent.com/bryceaspringfield/krillion-bank/live/';
+document.getElementById('h').textContent='Room '+R; document.title='Room '+R;
+function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function ago(s){var m=Math.round(Date.now()/1000-s);return m<60?m+' s':Math.round(m/60)+' min'}
+var KIND={pass:'answered',reject:'refused',out:'out',join:'joined',leave:'left',kick:'kicked',category:'new category'};
+function show(v){
+  document.getElementById('sub').textContent='Seen by our bot '+v.bot+' · updated '+ago(v.t)+' ago · refreshes every 10 s';
+  var p=(v.players||[]).map(function(x){return '<li class="'+(x[1]?'':'out')+(x[2]?' ours':'')+(x[0]===v.holder?' turn':'')+'">'+esc(x[0])+(x[2]?' (our bot)':'')+'</li>'}).join('');
+  var f=(v.feed||[]).slice().reverse().map(function(e){return '<tr><td class="k">'+esc(e[0])+'</td><td>'+esc(e[1])+'</td><td class="'+esc(e[2])+'">'+esc(KIND[e[2]]||e[2])+'</td><td>'+esc(e[3])+'</td></tr>'}).join('');
+  document.getElementById('body').innerHTML=
+    '<div class="box"><div class="k">Phase '+esc(v.phase)+(v.game!=null?' · game '+esc(v.game):'')+'</div><div class="cat">'+esc(v.category||'No category yet')+'</div>'+
+    (v.holder?'<div>Turn: <b>'+esc(v.holder)+'</b></div>':'')+'</div>'+
+    '<div class="row"><div class="box" style="flex:1;min-width:200px"><b>Players</b><ul>'+p+'</ul></div></div>'+
+    '<div class="box"><b>Latest events</b><table>'+(f||'<tr><td>None yet</td></tr>')+'</table></div>';
+}
+function none(){
+  document.getElementById('sub').innerHTML='No bot of ours is seated in this room now, so there is no view to show. '+
+    '<a href="https://krillion.io/party/'+R+'" target="_blank" rel="noopener">Open it on krillion.io</a> (the site has no watch mode: it asks you to join, which takes a seat).';
+  document.getElementById('body').innerHTML='';
+}
+function load(){
+  if(!R){document.getElementById('sub').textContent='No room code given.';return}
+  fetch(BASE+'rooms/'+R+'.json?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(show).catch(none);
+}
+load(); setInterval(load,10000);
+</script></body></html>
