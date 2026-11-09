@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Live rooms</title>
+<style>
+body{font:14px/1.4 system-ui,sans-serif;margin:16px;color:#1d1d1f;background:#fff}
+@media (prefers-color-scheme:dark){body{color:#e8e8ea;background:#16161a}th{background:#24242a!important}tr.nobot td{color:#9a9aa3}}
+h1{font-size:18px;margin:0 0 6px}
+.stats{display:flex;flex-wrap:wrap;gap:16px;margin:8px 0 12px}.stats div{min-width:120px}.stats b{display:block;font-size:20px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+table{border-collapse:collapse;width:100%;max-width:900px}th,td{text-align:left;padding:3px 8px;border-bottom:1px solid #8883}
+th{position:sticky;top:0;background:#f3f3f5;cursor:pointer}tr.nobot td{color:#77777f}td.n{text-align:right}
+.code{font-family:ui-monospace,monospace}.two{color:#c0392b;font-weight:600}
+</style></head><body>
+<h1>Live rooms</h1>
+<div id="when">Loading…</div>
+<div class="stats" id="stats"></div>
+<div class="bar">
+<input id="q" placeholder="Room code or bot name" size="24">
+<label><input type="radio" name="f" value="all" checked> All running rooms</label>
+<label><input type="radio" name="f" value="bot"> With a bot</label>
+<label><input type="radio" name="f" value="nobot"> Without a bot</label>
+<label><input type="radio" name="f" value="two"> Two bots or more</label>
+</div>
+<table><thead><tr><th data-k="0">Room</th><th data-k="1">Phase</th><th data-k="2">Players</th><th data-k="4">Bot display name</th><th data-k="5">Seated</th><th>Why no bot</th></tr></thead><tbody id="tb"></tbody></table>
+<script>
+// live.json is rewritten every minute by the cluster's writer job and pushed to this repository's `live` branch
+var SRC='https://raw.githubusercontent.com/bryceaspringfield/krillion-bank/live/live.json';
+var D=null, SORT=null, DESC=false;
+function ago(s){if(!s)return '';var m=Math.round((Date.now()/1000-s)/60);return m<1?'<1 min':m+' min'}
+function why(r){if(r[4].length)return '';if(r[2]>=r[3])return 'Full';if(r[2]==0)return 'No players';return 'Open, no bot yet'}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function draw(){
+  if(!D)return;
+  var q=document.getElementById('q').value.trim().toLowerCase(), f=document.querySelector('input[name=f]:checked').value;
+  var rows=D.rooms.filter(function(r){
+    if(f=='bot'&&!r[4].length)return false; if(f=='nobot'&&r[4].length)return false; if(f=='two'&&r[4].length<2)return false;
+    if(q&&r[0].toLowerCase().indexOf(q)<0&&!r[4].some(function(b){return String(b[0]).toLowerCase().indexOf(q)>=0}))return false;
+    return true});
+  if(SORT!==null)rows=rows.slice().sort(function(a,b){
+    var x=SORT==4?(a[4][0]||[''])[0]:SORT==5?-((a[4][0]||[0,0])[1]||0):a[SORT], y=SORT==4?(b[4][0]||[''])[0]:SORT==5?-((b[4][0]||[0,0])[1]||0):b[SORT];
+    return (x<y?-1:x>y?1:0)*(DESC?-1:1)});
+  var h=[];
+  rows.forEach(function(r){
+    var names=r[4].map(function(b){return esc(b[0])}).join(', '), since=r[4].map(function(b){return ago(b[1])}).filter(Boolean).join(', ');
+    h.push('<tr class="'+(r[4].length?'':'nobot')+'"><td class="code">'+esc(r[0])+'</td><td>'+esc(r[1])+'</td><td class="n">'+r[2]+' of '+r[3]+
+      '</td><td'+(r[4].length>1?' class="two"':'')+'>'+names+'</td><td>'+since+'</td><td>'+why(r)+'</td></tr>')});
+  document.getElementById('tb').innerHTML=h.join('');
+}
+function stats(){
+  var s=[['Running rooms',D.rooms_running],['With a bot',D.rooms_with_bot+' ('+Math.round(100*D.rooms_with_bot/Math.max(1,D.rooms_running))+'%)'],
+    ['Full, no bot',D.rooms_full_without_bot],['No players, no bot',D.rooms_empty_without_bot],['Rooms with two bots',D.rooms_two_bots],['Bots seated',D.bots_seated]];
+  document.getElementById('stats').innerHTML=s.map(function(x){return '<div><b>'+x[1]+'</b>'+x[0]+'</div>'}).join('');
+  var t=new Date(D.t*1000);
+  document.getElementById('when').textContent='As of '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York'})+' ET ('+ago(D.t)+' ago); refreshes every minute.';
+}
+function load(){
+  fetch(SRC+'?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){D=d;stats();draw()})
+  .catch(function(){document.getElementById('when').textContent='The live file did not load; retrying in a minute.'});
+}
+document.getElementById('q').oninput=draw;
+document.querySelectorAll('input[name=f]').forEach(function(e){e.onchange=draw});
+document.querySelectorAll('th[data-k]').forEach(function(th){th.onclick=function(){var k=+th.dataset.k;DESC=(SORT===k)?!DESC:false;SORT=k;draw()}});
+load(); setInterval(load,60000); setInterval(function(){if(D)stats()},15000);
+</script></body></html>
