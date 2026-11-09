@@ -69,4 +69,8 @@ document.getElementById('q').oninput=draw;
 document.querySelectorAll('input[name=f]').forEach(function(e){e.onchange=draw});
 document.querySelectorAll('th[data-k]').forEach(function(th){th.onclick=function(){var k=+th.dataset.k;DESC=(SORT===k)?!DESC:false;SORT=k;draw()}});
 load(); setInterval(load,20000); setInterval(function(){if(D)stats()},5000);
+
+// the tab reloads itself when a newer copy of this page is published, since an open tab keeps running the code it loaded
+var PAGEV='20261109181838';
+setInterval(function(){fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var PAGEV='(\d+)'/);if(m&&m[1]!==PAGEV)location.reload()}).catch(function(){})},60000);
 </script></body></html>
