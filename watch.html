@@ -24,7 +24,7 @@ function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return
 function ago(s){var m=Math.round(Date.now()/1000-s);return m<60?m+' s':Math.round(m/60)+' min'}
 var KIND={pass:'answered',reject:'refused',out:'out',join:'joined',leave:'left',kick:'kicked',category:'new category'};
 function show(v){
-  document.getElementById('sub').textContent='Seen by our bot '+v.bot+' · updated '+ago(v.t)+' ago · refreshes every 10 s';
+  document.getElementById('sub').textContent='Seen by our bot '+v.bot+' · updated '+ago(v.t)+' ago · refreshes every 5 s';
   var p=(v.players||[]).map(function(x){return '<li class="'+(x[1]?'':'out')+(x[2]?' ours':'')+(x[0]===v.holder?' turn':'')+'">'+esc(x[0])+(x[2]?' (our bot)':'')+'</li>'}).join('');
   var f=(v.feed||[]).slice().reverse().map(function(e){return '<tr><td class="k">'+esc(e[0])+'</td><td>'+esc(e[1])+'</td><td class="'+esc(e[2])+'">'+esc(KIND[e[2]]||e[2])+'</td><td>'+esc(e[3])+'</td></tr>'}).join('');
   document.getElementById('body').innerHTML=
@@ -38,17 +38,17 @@ function none(){
     '<a href="https://krillion.io/party/'+R+'" target="_blank" rel="noopener">Open it on krillion.io</a> (the site has no watch mode: it asks you to join, which takes a seat).';
   document.getElementById('body').innerHTML='';
 }
-// views come in files named by 20 s time slot and the code's first letter (s/<slot>_<letter>.json), since the host keeps one path 5 minutes
+// views come in files named by 5 s time slot and the code's first letter (s/<slot>_<letter>.json), since the host keeps one path 5 minutes
 function get(k){return fetch(BASE+'s/'+k+'_'+R[0]+'.json',{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()})}
 function load(){
   if(!R){document.getElementById('sub').textContent='No room code given.';return}
-  var k=Math.floor((Date.now()/1000-35)/20);
-  get(k).catch(function(){return get(k-1)}).catch(function(){return get(k-2)}).catch(function(){return get(k-4)})
-  .then(function(d){if(d[R])show(d[R]);else none()}).catch(function(){document.getElementById('sub').textContent='The view did not load; retrying in 10 s.'});
+  var k=Math.floor(Date.now()/1000/5)-2;
+  get(k).catch(function(){return get(k-1)}).catch(function(){return get(k-2)}).catch(function(){return get(k-3)}).catch(function(){return get(k-5)})
+  .then(function(d){if(d[R])show(d[R]);else none()}).catch(function(){document.getElementById('sub').textContent='The view did not load; retrying in 5 s.'});
 }
-load(); setInterval(load,10000);
+load(); setInterval(load,5000);
 
 // the tab reloads itself when a newer copy of this page is published, since an open tab keeps running the code it loaded
-var PAGEV='20261109181838';
-setInterval(function(){fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var PAGEV='(\d+)'/);if(m&&m[1]!==PAGEV)location.reload()}).catch(function(){})},60000);
+var PAGEV='120261109181838';
+setInterval(function(){fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var PAGEV='1(\d+)'/);if(m&&m[1]!==PAGEV)location.reload()}).catch(function(){})},60000);
 </script></body></html>
