@@ -29,6 +29,7 @@ th{position:sticky;top:0;background:#f3f3f5;cursor:pointer}tr.nobot td{color:#77
 var SRC='https://raw.githubusercontent.com/bryceaspringfield/krillion-bank/live/live.json';
 var D=null, SORT=null, DESC=false;
 function ago(s){if(!s)return '';var m=Math.round((Date.now()/1000-s)/60);return m<1?'<1 min':m+' min'}
+function agos(s){var x=Math.max(0,Math.round(Date.now()/1000-s));return x<90?x+' s':Math.round(x/60)+' min'}
 function why(r){if(r[4].length)return '';if(r[2]>=r[3])return 'Full';if(r[2]==0)return 'No players';return 'Open, no bot yet'}
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function draw(){
@@ -53,11 +54,16 @@ function stats(){
     ['Full, no bot',D.rooms_full_without_bot],['No players, no bot',D.rooms_empty_without_bot],['Rooms with two bots',D.rooms_two_bots],['Bots seated',D.bots_seated]];
   document.getElementById('stats').innerHTML=s.map(function(x){return '<div><b>'+x[1]+'</b>'+x[0]+'</div>'}).join('');
   var t=new Date(D.t*1000);
-  document.getElementById('when').textContent='As of '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York'})+' ET ('+ago(D.t)+' ago); refreshes every 20 s.';
+  document.getElementById('when').textContent='As of '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York'})+' ET ('+agos(D.t)+' ago); refreshes every 20 s.';
 }
+// each push writes a new file s/<slot>.json (slot: the time in 20 s units), since raw.githubusercontent.com keeps any one path 5 minutes;
+// the page asks for the slot of 35 s ago, then earlier ones, then live.json
+function get(u){return fetch(u,{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()})}
 function load(){
-  fetch(SRC+'?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){D=d;stats();draw()})
-  .catch(function(){document.getElementById('when').textContent='The live file did not load; retrying in a minute.'});
+  var k=Math.floor((Date.now()/1000-35)/20), B=SRC.replace('live.json','s/');
+  get(B+k+'.json').catch(function(){return get(B+(k-1)+'.json')}).catch(function(){return get(B+(k-2)+'.json')}).catch(function(){return get(B+(k-4)+'.json')})
+  .catch(function(){return get(SRC+'?t='+Date.now())}).then(function(d){if(!D||d.t>=D.t){D=d;stats();draw()}})
+  .catch(function(){document.getElementById('when').textContent='The live file did not load; retrying in 20 s.'});
 }
 document.getElementById('q').oninput=draw;
 document.querySelectorAll('input[name=f]').forEach(function(e){e.onchange=draw});

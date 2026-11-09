@@ -38,9 +38,13 @@ function none(){
     '<a href="https://krillion.io/party/'+R+'" target="_blank" rel="noopener">Open it on krillion.io</a> (the site has no watch mode: it asks you to join, which takes a seat).';
   document.getElementById('body').innerHTML='';
 }
+// views come in files named by 20 s time slot and the code's first letter (s/<slot>_<letter>.json), since the host keeps one path 5 minutes
+function get(k){return fetch(BASE+'s/'+k+'_'+R[0]+'.json',{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()})}
 function load(){
   if(!R){document.getElementById('sub').textContent='No room code given.';return}
-  fetch(BASE+'rooms/'+R+'.json?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(show).catch(none);
+  var k=Math.floor((Date.now()/1000-35)/20);
+  get(k).catch(function(){return get(k-1)}).catch(function(){return get(k-2)}).catch(function(){return get(k-4)})
+  .then(function(d){if(d[R])show(d[R]);else none()}).catch(function(){document.getElementById('sub').textContent='The view did not load; retrying in 10 s.'});
 }
 load(); setInterval(load,10000);
 </script></body></html>
