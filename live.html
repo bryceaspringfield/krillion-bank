@@ -10,11 +10,12 @@ h1{font-size:18px;margin:0 0 6px}
 .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 table{border-collapse:collapse;width:100%;max-width:900px}th,td{text-align:left;padding:3px 8px;border-bottom:1px solid #8883}
 th{position:sticky;top:0;background:#f3f3f5;cursor:pointer}tr.nobot td{color:#77777f}td.n{text-align:right}
-.code{font-family:ui-monospace,monospace}.two{color:#c0392b;font-weight:600}
+.code{font-family:ui-monospace,monospace}.code a{color:inherit}.two{color:#c0392b;font-weight:600}
 </style></head><body>
 <h1>Live rooms</h1>
 <div id="when">Loading…</div>
 <div class="stats" id="stats"></div>
+<div style="margin:-4px 0 8px;color:#77777f">Click a room code to watch the room in a new tab, as our bot there sees it.</div>
 <div class="bar">
 <input id="q" placeholder="Room code or bot name" size="24">
 <label><input type="radio" name="f" value="all" checked> All running rooms</label>
@@ -43,7 +44,7 @@ function draw(){
   var h=[];
   rows.forEach(function(r){
     var names=r[4].map(function(b){return esc(b[0])}).join(', '), since=r[4].map(function(b){return ago(b[1])}).filter(Boolean).join(', ');
-    h.push('<tr class="'+(r[4].length?'':'nobot')+'"><td class="code">'+esc(r[0])+'</td><td>'+esc(r[1])+'</td><td class="n">'+r[2]+' of '+r[3]+
+    h.push('<tr class="'+(r[4].length?'':'nobot')+'"><td class="code"><a href="watch.html?r='+esc(r[0])+'" target="_blank" rel="noopener">'+esc(r[0])+'</a></td><td>'+esc(r[1])+'</td><td class="n">'+r[2]+' of '+r[3]+
       '</td><td'+(r[4].length>1?' class="two"':'')+'>'+names+'</td><td>'+since+'</td><td>'+why(r)+'</td></tr>')});
   document.getElementById('tb').innerHTML=h.join('');
 }
@@ -52,7 +53,7 @@ function stats(){
     ['Full, no bot',D.rooms_full_without_bot],['No players, no bot',D.rooms_empty_without_bot],['Rooms with two bots',D.rooms_two_bots],['Bots seated',D.bots_seated]];
   document.getElementById('stats').innerHTML=s.map(function(x){return '<div><b>'+x[1]+'</b>'+x[0]+'</div>'}).join('');
   var t=new Date(D.t*1000);
-  document.getElementById('when').textContent='As of '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York'})+' ET ('+ago(D.t)+' ago); refreshes every minute.';
+  document.getElementById('when').textContent='As of '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York'})+' ET ('+ago(D.t)+' ago); refreshes every 20 s.';
 }
 function load(){
   fetch(SRC+'?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){D=d;stats();draw()})
@@ -61,5 +62,5 @@ function load(){
 document.getElementById('q').oninput=draw;
 document.querySelectorAll('input[name=f]').forEach(function(e){e.onchange=draw});
 document.querySelectorAll('th[data-k]').forEach(function(th){th.onclick=function(){var k=+th.dataset.k;DESC=(SORT===k)?!DESC:false;SORT=k;draw()}});
-load(); setInterval(load,60000); setInterval(function(){if(D)stats()},15000);
+load(); setInterval(load,20000); setInterval(function(){if(D)stats()},5000);
 </script></body></html>
