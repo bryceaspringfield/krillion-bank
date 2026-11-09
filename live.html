@@ -39,6 +39,8 @@ function draw(){
     if(f=='bot'&&!r[4].length)return false; if(f=='nobot'&&r[4].length)return false; if(f=='two'&&r[4].length<2)return false;
     if(q&&r[0].toLowerCase().indexOf(q)<0&&!r[4].some(function(b){return String(b[0]).toLowerCase().indexOf(q)>=0}))return false;
     return true});
+  // default order: lobbies first, the most open seats first (a lobby with open seats is one a player can join now), then the rest as written
+  if(SORT===null)rows=rows.slice().sort(function(a,b){var la=a[1]=='lobby',lb=b[1]=='lobby';if(la!=lb)return la?-1:1;return la?(b[3]-b[2])-(a[3]-a[2]):0});
   if(SORT!==null)rows=rows.slice().sort(function(a,b){
     var x=SORT==4?(a[4][0]||[''])[0]:SORT==5?-((a[4][0]||[0,0])[1]||0):a[SORT], y=SORT==4?(b[4][0]||[''])[0]:SORT==5?-((b[4][0]||[0,0])[1]||0):b[SORT];
     return (x<y?-1:x>y?1:0)*(DESC?-1:1)});
@@ -71,6 +73,6 @@ document.querySelectorAll('th[data-k]').forEach(function(th){th.onclick=function
 load(); setInterval(load,5000); setInterval(function(){if(D)stats()},5000);
 
 // the tab reloads itself when a newer copy of this page is published, since an open tab keeps running the code it loaded
-var PAGEV='120261109181838';
+var PAGEV='2120261109181838';
 setInterval(function(){fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var PAGEV='1(\d+)'/);if(m&&m[1]!==PAGEV)location.reload()}).catch(function(){})},60000);
 </script></body></html>
