@@ -13,10 +13,10 @@ th{position:sticky;top:0;background:#f3f3f5;cursor:pointer}tr.nobot td{color:#77
 .code{font-family:ui-monospace,monospace}.code a{color:inherit}.code a.w{font:12px system-ui,sans-serif;color:#77777f;margin-left:6px}.two{color:#c0392b;font-weight:600}
 .st{font-size:11px;padding:0 4px;border-radius:3px;margin-left:3px}.st-playing{background:#d9f2d9;color:#1d5c1d}.st-watching{background:#f2e6cc;color:#6b4e12}.st-waiting,.st-between-games{background:#e6e6ef;color:#44445a}
 </style></head><body>
-<h1>Live rooms</h1>
+<h1>Live rooms <a href="https://bryceaspringfield.github.io/krillion-bank/" style="font-size:14px;font-weight:normal;margin-left:10px">Question bank</a></h1>
 <div id="when">Loading…</div>
 <div class="stats" id="stats"></div>
-<div style="margin:-4px 0 8px;color:#77777f" id="apinote">For the room list as of the last 5 s, drag this link to the bookmarks bar, open krillion.io/party, and click the bookmark: <a id="bm" href="#">Krillion live rooms</a>. The page then reads the site's own room list every 5 s; the bots' seats still come from our status files, about 40 s behind.</div>
+<div style="margin:-4px 0 8px;color:#77777f" id="apinote">For the room list as of the last few seconds, drag this link to the bookmarks bar, open krillion.io/party, and click the bookmark: <a id="bm" href="#">Krillion live rooms</a>. The page then reads the site's own room list every 5 s; the bots' seats still come from our status files, about 40 s behind.</div>
 <div style="margin:-4px 0 8px;color:#77777f">Click a room code to open the room on krillion.io and play in it; "watch" shows the room as our bot there sees it, without taking a seat. Each bot is marked playing (in the running round), watching (out of the round, or seated after it began), waiting (in the lobby), or between games.</div>
 <div class="bar">
 <input id="q" placeholder="Room code or bot name" size="24">
@@ -105,6 +105,6 @@ load(); setInterval(load,5000); setInterval(function(){if(D)stats()},1000);
 if(API){document.title='Live rooms (room list)';apiLoad()}
 
 // the tab reloads itself when a newer copy of this page is published, since an open tab keeps running the code it loaded
-var PAGEV='120261110004516';
+var PAGEV='120261110023730';
 if(!API)setInterval(function(){fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var PAGEV='(\d+)'/);if(m&&m[1]!==PAGEV)location.reload()}).catch(function(){})},60000);
 </script></body></html>
