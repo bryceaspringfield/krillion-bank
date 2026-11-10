@@ -61,6 +61,8 @@ function draw(){
 function stats(){
   var s=[['Running rooms',D.rooms_running],['With a bot',D.rooms_with_bot+' ('+Math.round(100*D.rooms_with_bot/Math.max(1,D.rooms_running))+'%)'],
     ['Full, no bot',D.rooms_full_without_bot],['No players, no bot',D.rooms_empty_without_bot],['Rooms with two bots',D.rooms_two_bots],['Bots seated',D.bots_seated],['Bots playing',D.bots_playing],['Bots watching',D.bots_watching]];
+  var A=(BD&&BD.answers_distinct!=null)?BD:D;
+  if(A&&A.answers_distinct!=null)s=s.concat([['New answers, last hour',A.new_answers_hour.toLocaleString()],['Answers recorded, last hour',A.answers_recorded_hour.toLocaleString()],['New prompts, last hour',A.new_prompts_hour],['Distinct answers collected',A.answers_distinct.toLocaleString()]]);
   document.getElementById('stats').innerHTML=s.map(function(x){return '<div><b>'+x[1]+'</b>'+x[0]+'</div>'}).join('');
   var t=new Date(D.t*1000);
   document.getElementById('when').textContent='As of '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York'})+' ET ('+agos(D.t)+' ago); refreshes every '+(API&&APIDT?APIDT.toFixed(1):'5')+' s.';
@@ -105,6 +107,6 @@ load(); setInterval(load,5000); setInterval(function(){if(D)stats()},1000);
 if(API){document.title='Live rooms (room list)';apiLoad()}
 
 // the tab reloads itself when a newer copy of this page is published, since an open tab keeps running the code it loaded
-var PAGEV='120261110023730';
+var PAGEV='120261110024320';
 if(!API)setInterval(function(){fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var PAGEV='(\d+)'/);if(m&&m[1]!==PAGEV)location.reload()}).catch(function(){})},60000);
 </script></body></html>
