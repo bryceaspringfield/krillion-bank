@@ -6,7 +6,7 @@
 body{font:14px/1.4 system-ui,sans-serif;margin:16px;color:#1d1d1f;background:#fff}
 @media (prefers-color-scheme:dark){body{color:#e8e8ea;background:#16161a}th{background:#24242a!important}tr.nobot td{color:#9a9aa3}}
 h1{font-size:18px;margin:0 0 6px}
-.stats{display:flex;flex-wrap:wrap;gap:16px;margin:8px 0 12px}.stats div{min-width:120px}.stats b{display:block;font-size:20px}
+.stats{margin:8px 0 12px}.st{border-collapse:collapse}.st th,.st td{padding:2px 14px 2px 0;text-align:right}.st th:first-child,.st td:first-child{text-align:left;color:#9a9aa3}.st b{font-size:18px}.ans{margin-top:8px;display:flex;flex-wrap:wrap;gap:22px}.ans b{font-size:18px}
 .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 table{border-collapse:collapse;width:100%;max-width:900px}th,td{text-align:left;padding:3px 8px;border-bottom:1px solid #8883}
 th{position:sticky;top:0;background:#f3f3f5;cursor:pointer}tr.nobot td{color:#77777f}td.n{text-align:right}
@@ -55,11 +55,21 @@ function draw(){
   document.getElementById('tb').innerHTML=h.join('');
 }
 function stats(){
-  var s=[['Running rooms',D.rooms_running],['With a bot',D.rooms_with_bot+' ('+Math.round(100*D.rooms_with_bot/Math.max(1,D.rooms_running))+'%)'],
-    ['Full, no bot',D.rooms_full_without_bot],['No players, no bot',D.rooms_empty_without_bot],['Rooms with two bots',D.rooms_two_bots],['Bots seated',D.bots_seated],['Bots playing',D.bots_playing],['Bots watching',D.bots_watching]];
-  var A=(BD&&BD.answers_distinct!=null)?BD:D;
-  if(A&&A.answers_distinct!=null)s=s.concat([['New answers, last hour',A.new_answers_hour.toLocaleString()],['Answers recorded, last hour',A.answers_recorded_hour.toLocaleString()],['New prompts, last hour',A.new_prompts_hour],['Distinct answers collected',A.answers_distinct.toLocaleString()]]);
-  document.getElementById('stats').innerHTML=s.map(function(x){return '<div><b>'+x[1]+'</b>'+x[0]+'</div>'}).join('');
+  // rooms by phase, each with the rooms where a bot holds a seat (any bot not merely watching) and those where bots only watch
+  var P=[['All rooms',null],['Lobbies','lobby'],['Countdown','countdown'],['In a round','round'],['Between games','over']];
+  var c={};P.forEach(function(p){c[p[0]]=[0,0,0]});
+  (D.rooms||[]).forEach(function(r){var b=r[4]||[],seat=b.some(function(x){return x[2]!=='watching'}),obs=!seat&&b.length>0;
+    P.forEach(function(p){if(p[1]===null||p[1]===r[1]){var v=c[p[0]];v[0]++;if(seat)v[1]++;if(obs)v[2]++}})});
+  var pc=function(a,b){return a.toLocaleString()+' <small>('+(b?Math.round(100*a/b):0)+'%)</small>'};
+  var h='<table class="st"><tr><th></th>'+P.map(function(p){return '<th>'+p[0]+'</th>'}).join('')+'</tr>'+
+    '<tr><td>Rooms</td>'+P.map(function(p){return '<td><b>'+c[p[0]][0].toLocaleString()+'</b></td>'}).join('')+'</tr>'+
+    '<tr><td>With a bot in a seat</td>'+P.map(function(p){return '<td>'+pc(c[p[0]][1],c[p[0]][0])+'</td>'}).join('')+'</tr>'+
+    '<tr><td>With a bot only watching</td>'+P.map(function(p){return '<td>'+pc(c[p[0]][2],c[p[0]][0])+'</td>'}).join('')+'</tr></table>';
+  var A=(BD&&BD.answers_recorded_day!=null)?BD:D;
+  if(A&&A.answers_recorded_day!=null)h+='<div class="ans"><span><b>'+A.new_answers_day.toLocaleString()+'</b> new answers, last 24 hours</span>'+
+    '<span><b>'+(A.answers_recorded_day?(100*A.new_answers_day/A.answers_recorded_day).toFixed(1):'0')+'%</b> of '+A.answers_recorded_day.toLocaleString()+' answers recorded were new</span>'+
+    '<span><b>'+(A.answers_unique_day?(100*A.new_answers_day/A.answers_unique_day).toFixed(1):'0')+'%</b> of '+A.answers_unique_day.toLocaleString()+' unique answers seen were new</span></div>';
+  document.getElementById('stats').innerHTML=h;
   var t=new Date(D.t*1000);
   document.getElementById('when').textContent='As of '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York'})+' ET ('+agos(D.t)+' ago)';
 }
