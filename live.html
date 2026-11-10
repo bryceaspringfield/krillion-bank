@@ -16,6 +16,7 @@ th{position:sticky;top:0;background:#f3f3f5;cursor:pointer}tr.nobot td{color:#77
 <h1>Live rooms</h1>
 <div id="when">Loading…</div>
 <div class="stats" id="stats"></div>
+<div style="margin:-4px 0 8px;color:#77777f" id="apinote">For the room list as of the last 5 s, drag this link to the bookmarks bar, open krillion.io/party, and click the bookmark: <a id="bm" href="#">Krillion live rooms</a>. The page then reads the site's own room list every 5 s; the bots' seats still come from our status files, about 40 s behind.</div>
 <div style="margin:-4px 0 8px;color:#77777f">Click a room code to open the room on krillion.io and play in it; "watch" shows the room as our bot there sees it, without taking a seat. Each bot is marked playing (in the running round), watching (out of the round, or seated after it began), waiting (in the lobby), or between games.</div>
 <div class="bar">
 <input id="q" placeholder="Room code or bot name" size="24">
@@ -28,7 +29,12 @@ th{position:sticky;top:0;background:#f3f3f5;cursor:pointer}tr.nobot td{color:#77
 <script>
 // live.json is rewritten every minute by the cluster's writer job and pushed to this repository's `live` branch
 var SRC='https://raw.githubusercontent.com/bryceaspringfield/krillion-bank/live/live.json';
-var D=null, SORT=null, DESC=false;
+var D=null, BD=null, SORT=null, DESC=false;
+// on krillion.io (opened by the bookmark) the page reads the site's room list itself, which answers krillion.io's pages only, and joins
+// each room with the bots our status files place there (2026-11-09)
+var SITE='https://bryceaspringfield.github.io/krillion-bank/', API=location.hostname=='krillion.io';
+document.getElementById('bm').href="javascript:(function(){fetch('"+SITE+"live.html?'+Date.now()).then(function(r){return r.text()}).then(function(t){document.open();document.write(t);document.close()})})()";
+if(API)document.getElementById('apinote').textContent='Rooms from the site\'s own room list, read every 5 s; the bots\' seats from our status files, about 40 s behind.';
 function ago(s){if(!s)return '';var m=Math.round((Date.now()/1000-s)/60);return m<1?'<1 min':m+' min'}
 function agos(s){var x=Math.max(0,Math.round(Date.now()/1000-s));return x<90?x+' s':Math.round(x/60)+' min'}
 function why(r){if(r[4].length)return '';if(r[2]>=r[3])return 'Full';if(r[2]==0)return 'No players';return 'Open, no bot yet'}
@@ -48,7 +54,7 @@ function draw(){
   var h=[];
   rows.forEach(function(r){
     var names=r[4].map(function(b){return esc(b[0])+(b[2]?' <span class="st st-'+b[2].replace(' ','-')+'">'+esc(b[2])+'</span>':'')}).join(', '), since=r[4].map(function(b){return ago(b[1])}).filter(Boolean).join(', ');
-    h.push('<tr class="'+(r[4].length?'':'nobot')+'"><td class="code"><a href="https://krillion.io/party/'+esc(r[0])+'" target="_blank" rel="noopener">'+esc(r[0])+'</a>'+(r[4].length?' <a class="w" href="watch.html?r='+esc(r[0])+'" target="_blank" rel="noopener">watch</a>':'')+'</td><td>'+esc(r[1])+'</td><td class="n">'+r[2]+' of '+r[3]+
+    h.push('<tr class="'+(r[4].length?'':'nobot')+'"><td class="code"><a href="https://krillion.io/party/'+esc(r[0])+'" target="_blank" rel="noopener">'+esc(r[0])+'</a>'+(r[4].length?' <a class="w" href="'+SITE+'watch.html?r='+esc(r[0])+'" target="_blank" rel="noopener">watch</a>':'')+'</td><td>'+esc(r[1])+'</td><td class="n">'+r[2]+' of '+r[3]+
       '</td><td'+(r[4].length>1?' class="two"':'')+'>'+names+'</td><td>'+since+'</td><td>'+why(r)+'</td></tr>')});
   document.getElementById('tb').innerHTML=h.join('');
 }
@@ -64,7 +70,24 @@ function stats(){
 // loaded until a slot is missing, and on its first load walks back from 10 s ago to 2 minutes ago; live.json is the last fallback
 function get(u){return fetch(u,{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()})}
 var LASTK=0;
-function show(d){if(!D||d.t>=D.t){D=d;stats();draw()}}
+function show(d){if(!BD||d.t>=BD.t){BD=d;if(!API){D=d;stats();draw()}}}
+var APIBUSY=false;
+function apiLoad(){
+  if(APIBUSY)return; APIBUSY=true; var all=[];
+  function page(cur,n){return fetch('https://party.krillion.io/rooms'+(cur?'?cursor='+encodeURIComponent(cur):''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+    all=all.concat(d.rooms||[]); var c=d.nextCursor||d.cursor; if(c&&(d.rooms||[]).length&&n<45)return page(c,n+1)})}
+  page(null,0).then(function(){
+    var bots={}; if(BD)BD.rooms.forEach(function(r){if(r[4].length)bots[r[0]]=r[4]});
+    var rooms=all.map(function(x){return [x.code,x.phase,x.players,x.maxPlayers,bots[x.code]||[]]});
+    var wb=rooms.filter(function(r){return r[4].length}), seated=[].concat.apply([],wb.map(function(r){return r[4]}));
+    D={t:Date.now()/1000,rooms:rooms,rooms_running:rooms.length,rooms_with_bot:wb.length,
+       rooms_full_without_bot:rooms.filter(function(r){return !r[4].length&&r[2]>=r[3]}).length,
+       rooms_empty_without_bot:rooms.filter(function(r){return !r[4].length&&r[2]==0}).length,
+       rooms_two_bots:rooms.filter(function(r){return r[4].length>1}).length,bots_seated:seated.length,
+       bots_playing:seated.filter(function(b){return b[2]=='playing'}).length,bots_watching:seated.filter(function(b){return b[2]=='watching'}).length};
+    stats();draw();
+  }).catch(function(){document.getElementById('when').textContent='The room list did not load; retrying in 5 s.'}).then(function(){APIBUSY=false});
+}
 function fwd(B,k,n){return get(B+k+'.json').then(function(d){LASTK=k;show(d);if(n>0)return fwd(B,k+1,n-1)},function(){})}
 function back(B,k,lo){return get(B+k+'.json').then(function(d){LASTK=k;show(d)},function(){if(k>lo)return back(B,k-1,lo);throw 0})}
 function load(){
@@ -77,8 +100,9 @@ document.getElementById('q').oninput=draw;
 document.querySelectorAll('input[name=f]').forEach(function(e){e.onchange=draw});
 document.querySelectorAll('th[data-k]').forEach(function(th){th.onclick=function(){var k=+th.dataset.k;DESC=(SORT===k)?!DESC:false;SORT=k;draw()}});
 load(); setInterval(load,5000); setInterval(function(){if(D)stats()},5000);
+if(API){document.title='Live rooms (room list)';apiLoad();setInterval(apiLoad,5000)}
 
 // the tab reloads itself when a newer copy of this page is published, since an open tab keeps running the code it loaded
-var PAGEV='120261109211408';
-setInterval(function(){fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var PAGEV='(\d+)'/);if(m&&m[1]!==PAGEV)location.reload()}).catch(function(){})},60000);
+var PAGEV='120261109230500';
+if(!API)setInterval(function(){fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var PAGEV='(\d+)'/);if(m&&m[1]!==PAGEV)location.reload()}).catch(function(){})},60000);
 </script></body></html>
