@@ -63,7 +63,7 @@ function stats(){
     ['Full, no bot',D.rooms_full_without_bot],['No players, no bot',D.rooms_empty_without_bot],['Rooms with two bots',D.rooms_two_bots],['Bots seated',D.bots_seated],['Bots playing',D.bots_playing],['Bots watching',D.bots_watching]];
   document.getElementById('stats').innerHTML=s.map(function(x){return '<div><b>'+x[1]+'</b>'+x[0]+'</div>'}).join('');
   var t=new Date(D.t*1000);
-  document.getElementById('when').textContent='As of '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York'})+' ET ('+agos(D.t)+' ago); refreshes every 5 s.';
+  document.getElementById('when').textContent='As of '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York'})+' ET ('+agos(D.t)+' ago); refreshes every '+(API&&APIDT?APIDT.toFixed(1):'5')+' s.';
 }
 // each push writes a new file s/<slot>.json (slot: the time in 5 s units), since raw.githubusercontent.com keeps any one path 5 minutes;
 // a push reaches the raw server 35 to 45 s after its slot (measured 2026-11-09 19:45 ET), so the page walks forward from the last slot it
@@ -71,9 +71,11 @@ function stats(){
 function get(u){return fetch(u,{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()})}
 var LASTK=0;
 function show(d){if(!BD||d.t>=BD.t){BD=d;if(!API){D=d;stats();draw()}}}
-var APIBUSY=false;
+// a walk of the room list is serial (each page names the next page's cursor): 24 to 25 pages took 1.6 to 2.1 s (2026-11-10), so the
+// page starts the next walk 1 s after the last ends, and waits 5 s after a walk fails
+var APIGAP=1000, APIFAIL=5000, APIDT=0;
 function apiLoad(){
-  if(APIBUSY)return; APIBUSY=true; var all=[];
+  var all=[], t0=Date.now(), ok=false;
   function page(cur,n){return fetch('https://party.krillion.io/rooms'+(cur?'?cursor='+encodeURIComponent(cur):''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
     all=all.concat(d.rooms||[]); var c=d.nextCursor||d.cursor; if(c&&(d.rooms||[]).length&&n<45)return page(c,n+1)})}
   page(null,0).then(function(){
@@ -85,8 +87,8 @@ function apiLoad(){
        rooms_empty_without_bot:rooms.filter(function(r){return !r[4].length&&r[2]==0}).length,
        rooms_two_bots:rooms.filter(function(r){return r[4].length>1}).length,bots_seated:seated.length,
        bots_playing:seated.filter(function(b){return b[2]=='playing'}).length,bots_watching:seated.filter(function(b){return b[2]=='watching'}).length};
-    stats();draw();
-  }).catch(function(){document.getElementById('when').textContent='The room list did not load; retrying in 5 s.'}).then(function(){APIBUSY=false});
+    APIDT=(Date.now()-t0+APIGAP)/1000; ok=true; stats();draw();
+  }).catch(function(){document.getElementById('when').textContent='The room list did not load; retrying in 5 s.'}).then(function(){setTimeout(apiLoad,ok?APIGAP:APIFAIL)});
 }
 function fwd(B,k,n){return get(B+k+'.json').then(function(d){LASTK=k;show(d);if(n>0)return fwd(B,k+1,n-1)},function(){})}
 function back(B,k,lo){return get(B+k+'.json').then(function(d){LASTK=k;show(d)},function(){if(k>lo)return back(B,k-1,lo);throw 0})}
@@ -99,10 +101,10 @@ function load(){
 document.getElementById('q').oninput=draw;
 document.querySelectorAll('input[name=f]').forEach(function(e){e.onchange=draw});
 document.querySelectorAll('th[data-k]').forEach(function(th){th.onclick=function(){var k=+th.dataset.k;DESC=(SORT===k)?!DESC:false;SORT=k;draw()}});
-load(); setInterval(load,5000); setInterval(function(){if(D)stats()},5000);
-if(API){document.title='Live rooms (room list)';apiLoad();setInterval(apiLoad,5000)}
+load(); setInterval(load,5000); setInterval(function(){if(D)stats()},1000);
+if(API){document.title='Live rooms (room list)';apiLoad()}
 
 // the tab reloads itself when a newer copy of this page is published, since an open tab keeps running the code it loaded
-var PAGEV='120261109230500';
+var PAGEV='120261110004516';
 if(!API)setInterval(function(){fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){var m=t.match(/var PAGEV='(\d+)'/);if(m&&m[1]!==PAGEV)location.reload()}).catch(function(){})},60000);
 </script></body></html>
